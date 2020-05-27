@@ -1,15 +1,16 @@
 // ==UserScript==
 // @name         百度搜索优化插件（精简版）
 // @description  显示原始网址，移除重定向，针对网址进行过滤。
-// @namespace    binkcn@nga
+// @namespace    binkcn
 // @create       2019-01-25
-// @lastmodified 2019-01-25
-// @version      0.2
+// @lastmodified 2020-05-27
+// @version      0.3
 // @license      GNU GPL v3
 // @author       Binkcn
 // @connect      www.baidu.com
 // @include      *://www.baidu.com/*
 // @grant        GM_xmlhttpRequest
+// @note         2020-05-27 Version 0.3 很久不用百度了，所以迟迟没有发现插件已经失效，现已修复。
 // @note         2019-01-25 Version 0.2 每100毫秒执行一次过滤效果，解决在Ajax搜索下过滤不生效的问题。同时增加对新闻搜索结果的过滤。
 // @note         2019-01-25 Version 0.1 第一个版本发布。
 // ==/UserScript==
@@ -34,11 +35,19 @@
 						var url = ahref.replace(/^http:$/, 'https:');
 
 						var xhr = GM_xmlhttpRequest({
-							extData: ahref,
 							url: url,
 							headers: {"Accept": "*//*", "Referer": ahref.replace(/^http:/, "https:")},
-							method: "GET",
+							method: "HEAD",
 							timeout: 5000,
+							onload: function(r) {
+							},
+							onerror: function(response) {
+								if (response.error.indexOf('Request was redirected to a not whitelisted URL') >= 0){
+									var realUrl = getRegx(response.error, 'Refused to connect to "(.*)": Request was redirected to a not whitelisted URL');
+									if (realUrl == null || realUrl == '' || realUrl.indexOf("www.baidu.com/search/error") > 0) return;
+									doParseRedirectStatus(xhr, ahref, realUrl);
+								}
+							},
 							onreadystatechange: function (response) {
 								if (response.responseHeaders.indexOf("tm-finalurl") >= 0) {
 									var realUrl = getRegx(response.responseHeaders, "tm-finalurl\\w+: ([^\\s]+)");
