@@ -3,13 +3,14 @@
 // @description  显示原始网址，移除重定向，针对网址进行过滤。
 // @namespace    binkcn
 // @create       2019-01-25
-// @lastmodified 2020-05-27
-// @version      0.3
+// @lastmodified 2020-09-23
+// @version      0.4
 // @license      GNU GPL v3
 // @author       Binkcn
 // @connect      www.baidu.com
 // @include      *://www.baidu.com/*
 // @grant        GM_xmlhttpRequest
+// @note         2020-09-23 Version 0.4 移除右侧热搜栏，修复功能失效问题。
 // @note         2020-05-27 Version 0.3 很久不用百度了，所以迟迟没有发现插件已经失效，现已修复。
 // @note         2019-01-25 Version 0.2 每100毫秒执行一次过滤效果，解决在Ajax搜索下过滤不生效的问题。同时增加对新闻搜索结果的过滤。
 // @note         2019-01-25 Version 0.1 第一个版本发布。
@@ -18,7 +19,9 @@
 (function() {
 	'use strict';
 
-	var blockList = ['baijiahao.baidu.com', 'jingyan.baidu.com'];
+	var blockList = ['baijiahao.baidu.com', 'jingyan.baidu.com', 'zhidao.baidu.com', 'wenku.baidu.com', 'blog.csdn.net', 'www.csdn.net', 'cloud.tencent.com', 'www.jb51.net'];
+
+    document.getElementById('content_right').remove();
 
 	setInterval(function(){
 		var domList = document.querySelectorAll('h3.t > a, .c-row > a');
@@ -39,15 +42,15 @@
 							headers: {"Accept": "*//*", "Referer": ahref.replace(/^http:/, "https:")},
 							method: "HEAD",
 							timeout: 5000,
-							onload: function(r) {
-							},
-							onerror: function(response) {
-								if (response.error.indexOf('Request was redirected to a not whitelisted URL') >= 0){
-									var realUrl = getRegx(response.error, 'Refused to connect to "(.*)": Request was redirected to a not whitelisted URL');
+                            onload: function(r) {
+                            },
+                            onerror: function(response) {
+                                if (response.error.indexOf('Request was redirected to a not whitelisted URL') >= 0){
+                                    var realUrl = getRegx(response.error, 'Refused to connect to "(.*)": Request was redirected to a not whitelisted URL');
 									if (realUrl == null || realUrl == '' || realUrl.indexOf("www.baidu.com/search/error") > 0) return;
 									doParseRedirectStatus(xhr, ahref, realUrl);
-								}
-							},
+                                }
+                            },
 							onreadystatechange: function (response) {
 								if (response.responseHeaders.indexOf("tm-finalurl") >= 0) {
 									var realUrl = getRegx(response.responseHeaders, "tm-finalurl\\w+: ([^\\s]+)");
@@ -101,14 +104,11 @@
 
 					// Show url.
 					if (a.className.indexOf("c-showurl") >= 0) {
-						if(a.querySelector('span') != null){
-
-							if(realUrl.length < 40){
-								a.innerHTML = realUrl;
-							}else{
-								a.innerHTML = realUrl.substring(0, 40) + '...&nbsp;';
-							}
-						}
+                        if(realUrl.length < 40){
+                            a.innerHTML = realUrl;
+                        }else{
+                            a.innerHTML = realUrl.substring(0, 40) + '...&nbsp;';
+                        }
 					}
 				}
 				xhr.abort();
